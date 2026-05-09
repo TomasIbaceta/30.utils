@@ -1,0 +1,22 @@
+---
+- name: Setup Raspberry Pi Maintenance Network
+  hosts: all
+  become: yes
+  vars:
+    interface_name: eth0
+    static_ip: 10.42.0.2/24
+    gateway: 10.42.0.1
+    dns_servers: "10.42.0.1,8.8.8.8"
+
+  tasks:
+    - name: Configure NetworkManager connection with internet sharing
+      community.general.nmcli:
+        conn_name: maintenance-link
+        ifname: "{{ interface_name }}"
+        type: ethernet
+        ip4: "{{ static_ip }}"
+        gw4: "{{ gateway }}"
+        dns4: "{{ dns_servers }}"
+        state: present
+        method4: manual
+        autoconnect: yes

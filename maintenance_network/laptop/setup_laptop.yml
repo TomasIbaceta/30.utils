@@ -1,0 +1,26 @@
+---
+- name: Setup Laptop Maintenance Network (Ubuntu Shared)
+  hosts: localhost
+  become: yes
+  vars:
+    interface_name: enp0s31f6
+    static_ip: 10.42.0.1/24
+
+  tasks:
+    - name: Remove Netplan conflict if exists
+      file:
+        path: /etc/netplan/99-maintenance-link.yaml
+        state: absent
+
+    - name: Apply Netplan to clear removed config
+      command: netplan apply
+
+    - name: Configure NetworkManager connection for sharing
+      community.general.nmcli:
+        conn_name: maintenance-link
+        ifname: "{{ interface_name }}"
+        type: ethernet
+        ip4: "{{ static_ip }}"
+        method4: shared
+        state: present
+        autoconnect: yes
