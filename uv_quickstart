@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+project_name="${1:-}"
+
+if [ -z "$project_name" ]; then
+    echo "usage: uv_quickstart <project-name>"
+    exit 1
+fi
+
+if ! command -v uv >/dev/null 2>&1; then
+    echo "error: uv is not installed or is not available in PATH"
+    exit 1
+fi
+
+package_name="${project_name//-/_}"
+
+echo "creating project: $project_name"
+mkdir "$project_name"
+cd "$project_name"
+
+echo "initializing uv package project"
+uv init --app --package --name "$project_name" .
+
+echo "adding dev dependencies"
+uv add --dev pytest pdbpp ipdb
+
+echo "creating package structure"
+mkdir -p "src/$package_name/adder" tests
+
+cat > "src/$package_name/__main__.py" <<EOF
+from .adder import add_one
+
+
+def main() -> None:
+    print(add_one(1))
+
+
+if __name__ == "__main__":
+    main()
+EOF
+
+cat > "src/$package_name/adder/__init__.py" <<EOF
+from .adder import add_one
+
+__all__ = ["add_one"]
+EOF
+
+cat > "src/$package_name/adder/adder.py" <<EOF
+def add_one(x: int | float) -> int | float:
+    return x + 1
+EOF
+
+cat > "tests/test_adder.py" <<EOF
+from $package_name.adder import add_one
+
+
+def test_add_one():
+    assert add_one(1) == 2
+EOF
+
+cat > "Makefile" <<EOF
+.PHONY: help install run test
+
+help:
+	@printf "Available targets:\\n"
+	@printf "  make install  Sync dependencies with uv\\n"
+	@printf "  make run      Run the app\\n"
+	@printf "  make test     Run pytest\\n"
+	@printf "  make help     Show this help\\n"
+
+install:
+	uv sync
+
+run:
+	uv run python -m $package_name
+
+test:
+	uv run pytest
+EOF
+
+echo "running app"
+uv run python -m "$package_name"
+
+echo "running tests"
+uv run pytest
+
+echo "project ready: $project_name"
